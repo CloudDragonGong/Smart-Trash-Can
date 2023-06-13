@@ -135,15 +135,16 @@ def gar_sort(image):
     pred_id = np.argmax(score)
     print(pred_id)
     if pred_id==1 or pred_id==2:
-	    flag=0
+        flag=0
+    elif pred_id ==5:
+        flag=10
     elif pred_id>=3 and pred_id<=5:
-	    flag=1
+        flag=1
     elif pred_id>=6 and pred_id<=7:
-	    flag=2
+        flag=2
     elif pred_id>=8 and pred_id<=9:
-	    flag=3	
-
-
+        flag=3	
+        
     print('分类完成')
     return flag
 
