@@ -1,0 +1,9 @@
+opencv-python
+numpy
+onnxruntime
+PyQt5
+torch
+matplotlib
+Pillow
+torchvision
+pyserial
