@@ -50,7 +50,7 @@ from PIL import ImageFile
 
 import serial
 import serial.tools.list_ports as serials
-
+import onnxruntime
 
 # 神经网络参数初始化
 ImageFile.LOAD_TRUNCATED_IMAGES = True
@@ -63,6 +63,7 @@ class AIModule:
     def __init__(self, load_path):
         self.load_path = load_path
 
+    """
     def LoadModel(self):
         print("模型开始加载")
         global model
@@ -74,6 +75,16 @@ class AIModule:
         checkpoint = torch.load(self.load_path)
         model.load_state_dict(checkpoint["state_dict"])
         model.eval()
+        print("模型加载结束")
+    """
+
+    def LoadModel(self):
+        print("模型开始加载")
+        global model
+
+        # 加载训练好的模型
+        model = onnxruntime.InferenceSession("model_best_checkpoint_resnet181.onnx")
+
         print("模型加载结束")
 
     def Module(self, frame):
@@ -107,6 +118,7 @@ class AIModule:
         softmax_x = exp_x / np.sum(exp_x, 0)
         return softmax_x
 
+    """
     def gar_sort(self, image):
         # 对处理好的图片进行模型预测
         src = image.numpy()
@@ -124,6 +136,36 @@ class AIModule:
         print(pred_id)
         if pred_id == 1 or pred_id == 2:
             flag = 0
+        elif pred_id >= 3 and pred_id <= 5:
+            flag = 1
+        elif pred_id >= 6 and pred_id <= 7:
+            flag = 2
+        elif pred_id >= 8 and pred_id <= 9:
+            flag = 3
+
+        print("分类完成")
+        return flag
+    """
+
+    def gar_sort(self, image):
+        # 对处理好的图片进行模型预测
+        src = image.numpy()
+        src = src.reshape(3, 224, 224)
+        src = np.transpose(src, (1, 2, 0))
+        image = torch.unsqueeze(image, dim=0)
+        image = image.numpy()
+        ort_input = {"input": image}
+        print("分类开始")
+        pred = model.run(["output"], ort_input)[0][0]
+
+        # print(pred.dtype)
+        score = self.softmax(pred)
+        pred_id = np.argmax(score)
+        print(pred_id)
+        if pred_id == 1 or pred_id == 2:
+            flag = 0
+        elif pred_id == 5:
+            flag = 10
         elif pred_id >= 3 and pred_id <= 5:
             flag = 1
         elif pred_id >= 6 and pred_id <= 7:

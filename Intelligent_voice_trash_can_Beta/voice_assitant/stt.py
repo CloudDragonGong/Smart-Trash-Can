@@ -161,7 +161,7 @@ def transform(audio_path):
     
 if __name__ == "__main__":
     time1 = datetime.now()
-    speech=transform(r'./voice/response.mp3')
+    speech=transform(r'../voice/recording.mp3')
     print(speech)
     time2 = datetime.now()
     print(time2-time1)

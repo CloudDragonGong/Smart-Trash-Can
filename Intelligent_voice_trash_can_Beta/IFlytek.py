@@ -8,7 +8,7 @@ import multiprocessing
 from voice_assitant.real_time_recording_of_audio import real_time_recording_of_audio
 from voice_assitant import stt
 from voice_assitant import tts
-
+import SparkApi  
 
 # 接口地址
 url = "http://ltpapi.xfyun.cn/v1/ke"
@@ -27,9 +27,21 @@ class IFlytek_assistant(multiprocessing.Process):
         answer_file_path,
         keywords_file_path,
         if_need_update_keywords=True,
+        SparkApi_switch=False,
         voice_assistant_communication_queue=None,
     ):
+        """
+        output_filename : 输入的音频的MP3的文件地址
+        output_wav : 输入音频的wav文件地址
+        question_file_path : 问题地址
+        answer_file_path : 回答地址
+        keywords_file_path : 关键字地址
+        if_need_update_keywords=True :  是否需要更新关键字
+        SparkApi_switch=False : 是否开启星火聊天
+        voice_assistant_communication_queue=None : 信息queue 地址
+        """
         super().__init__()
+        self.SparkApi_switch=SparkApi_switch
         self.output_filename = output_filename
         self.output_wav = output_wav
         self.voice_assistant_communication_queue = voice_assistant_communication_queue
@@ -37,6 +49,7 @@ class IFlytek_assistant(multiprocessing.Process):
         self.keywords_file_path=keywords_file_path
         self.list = []
         self.list = self.read_text_file_n(question_file_path)
+        self.mode = 0 # 0 是纯文本关键字对话，1 是Spark聊天
         print('read over')
         if if_need_update_keywords :self.keywords_of_mate()
         else: self.list_key=self.read_txt_to_list_of_lists(self.keywords_file_path)
@@ -121,11 +134,34 @@ class IFlytek_assistant(multiprocessing.Process):
 
     # 返回回复
     def response(self, text):
+
+        # 提取关键字，和匹配的index
         keywords_of_input = self.extract_keywords(text=text)
+        print(keywords_of_input)
         index = self.find_matching_index(self.list_key, keywords_of_input)
-        if index == None:
-            return "不好意思主人，我不明白你在说什么"
-        return self.read_line(self.answer_file_path,index)
+        print(index)
+        print('self.mode = '+str(self.mode))
+        if self.SparkApi_switch:# 是否需要开启聊天模式
+
+            if index == (45 or 49 or 48 or 52):
+                # 开启聊天模式
+                self.mode=1
+                return self.read_line(self.answer_file_path,index)
+            elif index == (46 or 47 or 50 or 51):
+                # 关闭聊天模式
+                self.mode=0
+                return self.read_line(self.answer_file_path,index)
+            
+
+        if self.mode==0:
+
+            if index == None:
+                return "不好意思主人，我不明白你在说什么"
+            return self.read_line(self.answer_file_path,index)
+        
+        else :
+            return SparkApi.Spark_response(question=text)
+
 
     # 生成垃圾桶的满载情况
     def analysis_full_load_state(self):
@@ -222,7 +258,8 @@ class IFlytek_assistant(multiprocessing.Process):
             if real_time_recording_of_audio(
                 output_filename=self.output_filename, output_wav=self.output_wav
             ):
-                
+                # 更新list_key，从keywords文件中加载出来，生成列表
+                self.list_key=self.read_txt_to_list_of_lists(self.keywords_file_path)
                 if self.voice_assistant_communication_queue != None:
                     self.information = self.voice_assistant_communication_queue.get()
                 else:
@@ -252,6 +289,8 @@ if __name__ == "__main__":
         r"docs/questions.txt",
         r"docs/answers.txt",
         r"docs/keywords.txt",
-        if_need_update_keywords=False       
+        if_need_update_keywords=False,
+        SparkApi_switch=True
     )
     assistant.start()
+    # print(SparkApi.Spark_response('你能干什么'))

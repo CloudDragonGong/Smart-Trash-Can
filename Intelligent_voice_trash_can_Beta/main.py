@@ -60,6 +60,7 @@ import AI_module
 from lock import Lock
 from voice_assitant import VoiceAssistant
 from voice_assitant import voice_assistant_stupid
+from IFlytek import IFlytek_assistant
 # UI显示的字典
 UIinformation = {
     "garbageCategory": None,
@@ -99,7 +100,17 @@ if __name__ == "__main__":
     VM = cv_module.Vision_Module(q=UIQ,AI_module=AI,serial_port_address=None,voice_assistant_communication_queue=voice_assistant_communication_queue)
     # voice_assist = VoiceAssistant.VoiceAssistant(voice_assistant_communication_queue=voice_assistant_communication_queue,gpt_key="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",output_filename=r'voice/recording.mp3',output_wav=r'voice/recordning.wav',information=VM.get_information())
     # voice_assist.start()
-    voice_assist=voice_assistant_stupid.VoiceAssistantStupid(voice_assistant_communication_queue=voice_assistant_communication_queue)
+    # voice_assist=voice_assistant_stupid.VoiceAssistantStupid(voice_assistant_communication_queue=voice_assistant_communication_queue)
+    # voice_assist.start()
+    voice_assist = IFlytek_assistant(
+        r"voice/recording.mp3",
+        r"voice/recording.wav",
+        r"docs/questions.txt",
+        r"docs/answers.txt",
+        r"docs/keywords.txt",
+        if_need_update_keywords=False,
+        SparkApi_switch=True
+    )
     voice_assist.start()
     VM.run()
     
