@@ -38,14 +38,20 @@ class Client:
         self.client_socket.sendall(serialized_dict.encode("utf-8"))
         print("字典已发送")
 
-    def receive_string(self):
-        data = self.client_socket.recv(1024).decode("utf-8")
-        return data
+    def receive_string(self,length=1024):
+        while True:
+            data = self.client_socket.recv(length)
+            if data:
+                data = data.decode('utf-8')
+                return data
 
     def receive_dict(self):
-        data = self.client_socket.recv(1024).decode("utf-8")
-        dictionary = json.loads(data)
-        return dictionary
+        while True:
+            data = self.client_socket.recv(1024)
+            if data:
+                data = data.decode('utf-8')
+                dictionary = json.loads(data)
+                return dictionary
 
     def receive_mp3(self, mp3_filename):
         with open(mp3_filename, "wb") as file:
@@ -65,6 +71,6 @@ class Client:
 
 
 if __name__ == '__main__':
-    client = Client('127.0.0.1', 8001)
+    client = Client('10.13.4.45', 8001)
     time.sleep(1)
-    client.send_dict({'a':1,'b':2})
+    client.receive_mp3('test_receive.mp3')

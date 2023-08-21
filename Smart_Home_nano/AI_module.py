@@ -15,7 +15,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 class Resnet:
-    def __init__(self, load_path="model_best_checkpoint_resnet181.onnx"):
+    def __init__(self, load_path="resnet50.onnx"):
         self.load_path = load_path
         print("模型开始加载")
         if self.load_path is not None:
@@ -73,14 +73,15 @@ class Resnet:
         score = self.softmax(pred)
         pred_id = np.argmax(score)
         print(pred_id)
-        if pred_id == 1 or pred_id == 2:
+        if pred_id >=0 and pred_id <15 :
             flag = 0
-        elif pred_id >= 3 and pred_id <= 5:
+        elif pred_id >=15 and pred_id < 23:
             flag = 1
-        elif pred_id >= 6 and pred_id <= 7:
+        elif pred_id >= 23 and pred_id < 53:
             flag = 2
-        elif pred_id >= 8 and pred_id <= 9:
+        elif pred_id >= 53 and pred_id <= 63:
             flag = 3
-
+        else:
+            flag = 4
         print("分类完成")
         return flag

@@ -16,6 +16,9 @@ STATUS_FIRST_FRAME = 0  # 第一帧的标识
 STATUS_CONTINUE_FRAME = 1  # 中间帧标识
 STATUS_LAST_FRAME = 2  # 最后一帧的标识
 
+# 用于模块级别的变量
+global if_right
+if_right = True
 
 class Ws_Param(object):
     # 初始化
@@ -67,6 +70,7 @@ class Ws_Param(object):
 # 收到websocket消息的处理
 def on_message(ws, message):
     global speech
+    global if_right
     result = ""
     try:
         code = json.loads(message)["code"]
@@ -74,7 +78,7 @@ def on_message(ws, message):
         if code != 0:
             errMsg = json.loads(message)["message"]
             print("sid:%s call error:%s code is:%s" % (sid, errMsg, code))
-
+            if_right = False
         else:
             data = json.loads(message)["data"]["result"]["ws"]
             # print(json.loads(message))
@@ -83,7 +87,9 @@ def on_message(ws, message):
                     result += w["w"]
             print(result)
             speech = speech + result
+            if_right = True
     except Exception as e:
+        if_right = False
         print("receive msg,but parse exception:", e)
 
 

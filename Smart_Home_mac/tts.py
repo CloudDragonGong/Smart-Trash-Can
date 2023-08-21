@@ -19,8 +19,10 @@ STATUS_FIRST_FRAME = 0  # 第一帧的标识
 STATUS_CONTINUE_FRAME = 1  # 中间帧标识
 STATUS_LAST_FRAME = 2  # 最后一帧的标识
 
-
 file_name = 'response.mp3'
+
+global if_right
+if_right = True
 
 class Ws_Param(object):
     # 初始化
@@ -75,6 +77,7 @@ class Ws_Param(object):
 def on_message(ws, message):
     global received_audio
     global file_name
+    global if_right
     try:
         message = json.loads(message)
         code = message["code"]
@@ -87,20 +90,21 @@ def on_message(ws, message):
             print("ws is closed")
             ws.close()
             # 播放音频
-            # play_mp3('response.mp3')
+            # play_mp3(file_name)
         if code != 0:
             errMsg = message["message"]
+            if_right = False
             # print("sid:%s call error:%s code is:%s" % (sid, errMsg, code))
         else:
-
+            if_right = True
             with open(file_name, 'ab') as f:
                 f.write(audio)
                 f.flush()  # 立即将数据写入文件
 
     except Exception as e:
+        if_right = False
         print("receive msg,but parse exception:", e)
 
-    # 播放MP3文件
 
 
 def play_mp3(file_path):
@@ -121,6 +125,7 @@ def on_close(ws, A, B):
 # 收到websocket连接建立的处理
 def on_open(ws, wsParam):
     global file_name
+
     def run(*args):
         d = {"common": wsParam.CommonArgs,
              "business": wsParam.BusinessArgs,
@@ -135,7 +140,7 @@ def on_open(ws, wsParam):
     thread.start_new_thread(run, ())
 
 
-def transform(response,file_name_):
+def transform(response, file_name_):
     global file_name
     file_name = file_name_
     # 测试时候在此处正确填写相关信息即可运行
@@ -150,7 +155,11 @@ def transform(response,file_name_):
 
 
 if __name__ == "__main__":
+    file_name = '当前是成堆模式，没听清楚您在说什么垃圾，请再次说出您要投放的垃圾'
+    file_path = file_name+'.mp3'
     time1 = datetime.now()
-    transform("大家好，我是人工智能助手小科，我能垃圾分类、聊天、查询天气、查询时间等等，有什么需要帮助的吗？[p100]",r'response_test.mp3')
+    transform(file_name, file_path)
+    sound = AudioSegment.from_mp3(file_name)
+    play(sound)
     time2 = datetime.now()
     print(time2 - time1)

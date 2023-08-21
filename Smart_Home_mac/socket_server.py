@@ -1,5 +1,6 @@
 import socket
 import json
+import time
 
 
 class Server:
@@ -20,6 +21,7 @@ class Server:
             return decoded_data
 
     def receive_mp3(self, file_path):
+        print('开始接收mp3文件')
         with open(file_path, "wb") as file:
             while True:
                 data = self.client_socket.recv(1024)
@@ -31,6 +33,7 @@ class Server:
                     break
                 file.write(data)
             print("MP3文件接收完毕")
+        return file_path
 
     def receive_dict(self):
         data = self.client_socket.recv(1024)
@@ -62,5 +65,6 @@ class Server:
 
 
 if __name__ == '__main__':
-    server = Server('127.0.0.1', 8001)
-    server.receive_dict()
+    server = Server('0.0.0.0', 8001)
+    time.sleep(5)
+    server.send_mp3(r'response_test.mp3')

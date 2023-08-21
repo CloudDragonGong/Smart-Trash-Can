@@ -11,7 +11,7 @@ def post_request(url, json):
 
 #  ['你现在假扮一个垃圾桶，你的垃圾桶全部是满载状态','好的']
 payload = {"input": {
-    "text": "你好，你的垃圾桶还能放下垃圾吗",
+    "text": "介绍一下清华大学",
     "history": [[f"你现在假扮一个垃圾桶，你的垃圾桶的满载情况是{data['full_load']}，别人问你时，把你的回答写下来，只是回答答案就行，别那么冗余", '好的']]}}
 response = post_request(API_URL, json=payload)
 print(response.json())

@@ -4,9 +4,8 @@ API_URL = 'https://model-app-func-modelscbbb-ccdb-xjrhdwuvho.cn-shanghai.fcapp.r
 
 
 class Model:
-    def __init__(self, prompt):
+    def __init__(self):
         self.history = [
-            [prompt,'好的']
         ]
 
     def response(self, text):

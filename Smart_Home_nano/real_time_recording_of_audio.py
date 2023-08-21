@@ -27,6 +27,7 @@ import time
 
 
 def real_time_recording_of_audio(
+        data_outside,
         format_=pyaudio.paInt16,
         channels=1,
         rate=16000,
@@ -34,7 +35,7 @@ def real_time_recording_of_audio(
         output_filename="recording.mp3",
         output_wav="recording.wav",
         response_time_threshold=0.3,
-        end_time_threshold=1
+        end_time_threshold=1,
 ):
     audio = pyaudio.PyAudio()
     stream = audio.open(format=format_, channels=channels,
@@ -45,14 +46,15 @@ def real_time_recording_of_audio(
     non_mute_times = 0
     triggered_response_gate = False
 
-    while True:
+
+    while( not data_outside['if_begin']) or data_outside['triggered_process'] == 2 :
         data = stream.read(chunk)
         audio_data = np.frombuffer(data, dtype=np.int16)
         volume = np.abs(audio_data).mean()
-        print(f"音量大小: {volume}")
+        # print(f"音量大小: {volume}")
 
         if not triggered_response_gate:
-            if volume > 100:
+            if volume > 500:
                 frames.append(data)
                 non_mute_times += 1
             else:
@@ -64,7 +66,7 @@ def real_time_recording_of_audio(
             frames.append(data)
             triggered_response_gate = True
 
-            if volume < 100:
+            if volume < 500:
                 mute_times += 1
             else:
                 mute_times = 0
@@ -126,7 +128,7 @@ def real_time_recording_of_audio_timeout(
         print(f"音量大小: {volume}")
 
         if not triggered_response_gate:
-            if volume > 100:
+            if volume > 500:
                 frames.append(data)
                 non_mute_times += 1
             else:
@@ -138,7 +140,7 @@ def real_time_recording_of_audio_timeout(
             frames.append(data)
             triggered_response_gate = True
 
-            if volume < 100:
+            if volume < 500:
                 mute_times += 1
             else:
                 mute_times = 0

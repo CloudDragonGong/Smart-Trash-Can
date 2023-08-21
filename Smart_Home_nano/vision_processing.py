@@ -13,31 +13,39 @@ class VisionProcessing(Processing):
         self.frame = None
         self.cap = None
         self.mp3_filename = {
-            '其他垃圾': r'',
-            '可回收垃圾': r'',
-            '厨余垃圾': r'',
-            '有害垃圾': r''
+            '其他垃圾': r'voice/其他垃圾.mp3',
+            '可回收垃圾': r'voice/可回收垃圾.mp3',
+            '厨余垃圾': r'voice/厨余垃圾.mp3',
+            '有害垃圾': r'voice/有害垃圾.mp3'
         }
 
     def open_camera(self):
         self.cap = cv2.VideoCapture(0)
         _, self.frame = self.cap.read()
+        try:
+            cv2.imwrite('test_cap.png',self.frame)
+            return True
+        except:
+            print('************error of camera****************')
+            return False
 
     def close_camera(self):
         self.cap.release()
 
     def classifier(self):
         flag = self.resnet.classify(self.frame)
+        print(f'flag= {flag}')
         if flag == 0:
             self.garbage_type = "其他垃圾"
-        if flag == 1:
+        elif flag == 1:
             self.garbage_type = "厨余垃圾"
-        if flag == 2:
+        elif flag == 2:
             self.garbage_type = "可回收垃圾"
-        if flag == 3:
+        elif flag == 3:
             self.garbage_type = "有害垃圾"
         else:
             self.garbage_type = None
+        print(self.garbage_type)
         if flag in [0, 1, 2, 3]:
             return True
         else:
@@ -47,11 +55,12 @@ class VisionProcessing(Processing):
         self.data['garbage_type'] = self.garbage_type
 
     def identify(self):
+        print(f"begin state:{self.data['if_begin']}")
         # continuous identify
         while not self.data['if_begin']:
             print('camera is working')
-            self.open_camera()
-            if self.classifier():
+            if self.open_camera() and  self.classifier():
+                print('begin')
                 self.close_camera()
                 self.data['if_begin'] = True
                 self.data['triggered_process'] = 1
@@ -60,6 +69,7 @@ class VisionProcessing(Processing):
                 pass
 
     def run(self):
+        self.audio_play(self.mp3_filename[self.garbage_type])
         self.embedded_info_transfer(1, self.message_open_can[self.garbage_type])
         self.embedded_info_recv()
         self.UI_info_transfer()
