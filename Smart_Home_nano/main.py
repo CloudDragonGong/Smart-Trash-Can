@@ -1,7 +1,7 @@
 import multiprocessing
 import platform
 import sys
-
+import time
 from PyQt5.QtWidgets import QApplication
 
 from UI import SmartTrashCanUI
@@ -95,13 +95,15 @@ class Main:
             if self.data['triggered_process'] == 1:
                 print('vision process')
                 self.vision_processing.run()
-            elif self.data['triggered_process'] == 2:
+            elif self.data['triggered_process']==2:
                 print('speech interception')
                 self.speech_interception.run()
             else:
                 pass
+
             self.data['if_begin'] = False
             print('finish a cycle')
+            time.sleep(2)
 
 
 def run_ui(data_queue):

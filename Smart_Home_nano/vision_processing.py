@@ -61,6 +61,7 @@ class VisionProcessing(Processing):
             print('camera is working')
             if self.open_camera() and  self.classifier():
                 print('begin')
+                cv2.imwrite('cap.png',self.frame)
                 self.close_camera()
                 self.data['if_begin'] = True
                 self.data['triggered_process'] = 1

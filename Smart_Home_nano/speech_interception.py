@@ -50,9 +50,17 @@ class SpeechInterception:
 
     def speech_to_text(self):
         self.client.send_string('speech_to_text')
-        time.sleep(1)
+        time.sleep(0.1)
         self.client.send_mp3(self.wait_voice_speech_mp3)
-        text = self.client.receive_string()
+        text = ''
+        while not self.data['if_begin']:
+            recv_data = self.client.client_socket.recv(2048)
+            if recv_data:
+                recv_data= recv_data.decode('utf-8')
+                text = recv_data
+                return text
+        if self.data['if_begin']:
+            self.client.send_string('n')
         return text
 
     def text_to_speech(self, text):
@@ -78,13 +86,13 @@ class SpeechInterception:
         while self.wait_voice(self.data):
             text = self.speech_to_text()
             self.update_input_text(text)  # 更新嗨小龙
-            if self.name in text:
+            if self.name in text and not self.data['if_begin']:
                 self.client.send_string('y')
                 self.data['if_begin'] = True
                 self.data['triggered_process'] = 2
                 self.update_captions(caption='我在呢')
                 return True
-            else:
+            elif not self.data['if_begin']:
                 self.client.send_string('n')
                 self.data['triggered_process'] = 0
                 self.data['if_begin'] = False
@@ -182,7 +190,7 @@ if __name__ == '__main__':
     speech_interception = SpeechInterception(
         client=client,
         data=data,
-        activation_name='小龙',
+        activation_name='龙',
         communicate_queue=communicate_queue
     )
     speech_interception.identify()

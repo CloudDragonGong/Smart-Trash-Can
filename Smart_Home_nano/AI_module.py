@@ -77,9 +77,9 @@ class Resnet:
             flag = 0
         elif pred_id >=15 and pred_id < 23:
             flag = 1
-        elif pred_id >= 23 and pred_id < 53:
+        elif pred_id >= 23 and pred_id < 52:
             flag = 2
-        elif pred_id >= 53 and pred_id <= 63:
+        elif pred_id >= 52 and pred_id < 63:
             flag = 3
         else:
             flag = 4

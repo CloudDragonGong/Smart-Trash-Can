@@ -5,6 +5,7 @@ import serial
 from pydub import AudioSegment
 from pydub.playback import play
 from multiprocessing import Queue
+from copy import deepcopy
 
 from real_time_recording_of_audio import real_time_recording_of_audio
 
@@ -126,9 +127,10 @@ class Processing:
         Returns:
 
         """
+        message_copy = deepcopy(message)
         mode_info = [[0x01], [0x02], [0x03], [0x04]]  # 补全message
-        message.insert(2, mode_info[mode - 1])
-        for message_element in message:
+        message_copy.insert(2, mode_info[mode - 1])
+        for message_element in message_copy:
             message_element = bytearray(message_element)
             time.sleep(0.1)
             print(message_element)
@@ -140,7 +142,7 @@ class Processing:
         while True:
             data = self.ser.read(1)
             print(data)
-            if data == b"":
+            if data == b"" :
                 continue
             else:
                 break
@@ -157,17 +159,27 @@ class Processing:
         Returns:
 
         """
+        time.sleep(1)
         data = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
 
         print("开始等待读取")
-        for i in range(0, len(data)):
-            data[i] = self.recv()
-            data[i] = int.from_bytes(data[i], byteorder="big")
-            print(data[i])
+        if_begin = False
+        recv_num = 0 
+        while True:
+            data_recv = self.recv()
+            data_recv = int.from_bytes(data_recv, byteorder="big")
+            print(data_recv)
+            if data_recv == 0x2C:
+                if_begin = True
+            if if_begin:
+                data[recv_num] = data_recv
+                recv_num = recv_num +1 
+            if recv_num == len(data):
+                break
             # data[i]=ser.read(1)
             # print(data[i])
             # data[i]=int.from_bytes(data[i],byteorder='big')
-        print("读取完成")
+        print("读取完成:"+str(data))
         garbage_type = ['其他垃圾', '厨余垃圾', ' 可回收垃圾 ', '有害垃圾']
         if data[0] == 0x2C and data[1] == 0x12:
             self.data['full_load'][garbage_type[data[3]]] = bool(data[2])

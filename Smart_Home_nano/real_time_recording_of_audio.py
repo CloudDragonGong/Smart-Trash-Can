@@ -89,6 +89,7 @@ def real_time_recording_of_audio(
                 print("MP3文件保存成功."+output_filename)
 
                 return True
+    return False
 
 
 def delete_mp3_files(directory):

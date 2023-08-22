@@ -13,7 +13,7 @@ x_appid = "0c946150"
 #开放平台应用接口秘钥
 api_key = "dd56dd6e1b3116009b5f819274539c8f"
 #语言文本
-TEXT="我要取出其他垃圾桶"
+TEXT="我要投放一堆的香蕉皮"
 
 
 def extract_keywords(text):
