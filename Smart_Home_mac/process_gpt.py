@@ -10,7 +10,8 @@ from Web_extract_keywords import extract_keywords
 class ProcessChat:
     def __init__(self, ip, port):
         self.data = {
-            'full_load': [False, False, True, False]
+            'full_load': [False, False, False, False],
+            'number_of_launch': [0, 0, 0, 0]
         }
         self.server = Server(ip, port)
         self.garbage_type = None
@@ -54,9 +55,6 @@ class ProcessChat:
         "种模式的话就是聊天模式）"
         model = Model(prompt)
         return model.response(input_text)
-
-
-
 
     def mode_classify(self, text):
         text_keywords = extract_keywords(text)
@@ -116,25 +114,23 @@ class ProcessChat:
         else:
             return '聊天模式', None
 
-
     def judge_finished(self, text):
         if '完' in text:
             return True
         else:
             return False
 
-
     def chat(self, text):
         system_content = f"""
                 你是一个智能垃圾桶的语音助手，你可以将帮用户通过视觉分类垃圾，将垃圾分为其他垃圾，厨余垃圾，可回收垃圾和有害垃圾四个类别/
                 现在垃圾桶的满载情况是{self.data['full_load']},分别对应着垃圾桶的满载情况,True就是满载，False就是未满载/
                 并且满载的垃圾桶不可以投放垃圾了，需要先清理垃圾桶/
+                现在垃圾桶的投放情况是{self.data['number_of_launch']},分别对应着：其他垃圾，厨余垃圾，可回收垃圾和有害垃圾四个类别，这是用户的每种垃圾桶投放的次数，你可以根据此来估计用户产生垃圾的量/
                 所以你就要根据情况灵活进行应答
                 """
         model = Model(system_content)
         response_str = model.response(text)
         return response_str
-
 
     def recv_begin_or_data(self):
         try:
@@ -145,12 +141,13 @@ class ProcessChat:
             elif header == 'n':
                 return False
             elif header == 'speech_to_text':
+                self.server.send_dict({'0': True})  # 发送接收string成功
                 self.server.receive_mp3(self.receive_mp3_path)
                 text = self.mp3_to_text(file_name=self.receive_mp3_path)
+                print(text)
                 if text == '':
                     text = 'NO_STR'
-                self.server.send_string(text)
-                print(text)
+                self.server.send_string(text)  # 发送语音转文字的文字
                 return False
             elif header == 'text_to_speech':
                 str_ = self.server.receive_string()
@@ -161,8 +158,8 @@ class ProcessChat:
                 self.data = self.server.receive_dict()
                 return False
         except SystemError:
+            self.server.send_dict({'0': False})  # 报错消息string发送，提醒对方再次发送
             print('recv is error')
-
 
     def send_dict(self, mode=None, is_over=False, is_there_mp3_file=False, answer=None, text=None):
         dict_ = {
@@ -177,7 +174,6 @@ class ProcessChat:
         print('send_dict is done')
         return True
 
-
     def mp3_to_text(self, file_name):
         # 解决api不稳定的问题
         while True:
@@ -186,13 +182,11 @@ class ProcessChat:
                 break
         return text
 
-
     def text_to_mp3(self, text, file_name):
         while True:
             tts.transform(text, file_name)
             if tts.if_right:
                 break
-
 
     def select_mode(self, mode_type, text):
         if mode_type == '分类模式':
@@ -206,7 +200,6 @@ class ProcessChat:
         elif mode_type == '投放结束模式':
             pass
 
-
     def classify_mode(self):
         while self.garbage_type is None:
             file_path = self.server.receive_mp3(self.receive_again_mp3_path)
@@ -216,36 +209,35 @@ class ProcessChat:
         self.recv_begin_or_data()
         print('classify_mode is done')
 
-
     def stacked_release_mode(self):
         while self.garbage_type is None:
             file_path = self.server.receive_mp3(self.receive_again_mp3_path)
             text = self.mp3_to_text(file_path)
+            self.send_dict(text=text)  # send the text
             self.garbage_type = self.classify(text)
-            self.send_dict(text=text)
+            self.send_dict(text=text)  # send the garbage_type
         while True:
             self.server.receive_mp3(self.receive_again_mp3_path)
             text = self.mp3_to_text(self.receive_again_mp3_path)
-
+            self.send_dict(text=text)  # send the text
             if self.judge_finished(text):
-                self.send_dict(is_over=True, text=text)
+                self.send_dict(is_over=True, text=text)  # send the garbage type or over
                 break
             else:
-                self.garbage_type = self.classify(text)
+                self.garbage_type = self.classify(text)  # send the garbage type or over
                 self.send_dict(text=text)
         self.recv_begin_or_data()
         print('stacked_release_mode is done')
-
 
     def dumping_mode(self):
         while self.garbage_type is None:
             self.server.receive_mp3(self.receive_again_mp3_path)
             text = self.mp3_to_text(self.receive_again_mp3_path)
+            self.send_dict(text=text)  # send the text
             self.garbage_type = self.classify(text)
-            self.send_dict(text=text)
+            self.send_dict(text=text)  # send the garbage_type
         print('dumping_mode is done')
         self.recv_begin_or_data()
-
 
     def chat_mode(self, text):
         response_str = self.chat(text)
@@ -255,15 +247,14 @@ class ProcessChat:
         self.server.send_mp3(self.answer_mp3_path)
         print('chat_mode is done')
 
-
     def end_mode(self):
         print('End of one cycle')
-
 
     def run(self):
         while True:
             if self.recv_begin_or_data():
                 text = self.mp3_to_text(self.receive_mp3_path)
+                self.send_dict(text=text)  # 跟新字幕
                 print(text)
                 mode_type, self.garbage_type = self.mode_classify(text)
                 print(f'mode_type is {mode_type} , self.garbage_type is {self.garbage_type}')

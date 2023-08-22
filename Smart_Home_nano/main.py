@@ -57,7 +57,9 @@ class Main:
             'input_text': '请说话'
         }
         self.communicate_queue = Queue(1)
-        self.client = Client(ip='127.0.0.1', port=8001) if platform.system() == 'Darwin' else Client(ip='10.13.4.45',
+        self.text_queue = Queue(1)
+
+        self.client = Client(ip='127.0.0.1', port=8001) if platform.system() == 'Darwin' else Client(ip='172.20.10.5',
                                                                                                      port=8001)
         self.resnet = Resnet()
         self.open_port = '/dev/tty.Bluetooth-Incoming-Port' if platform.system() == 'Darwin' else "/dev/ttyUSB0"
@@ -66,13 +68,15 @@ class Main:
             data=self.data,
             resnet=self.resnet,
             communicate_queue=self.communicate_queue,
+            text_queue=self.text_queue,
             serial_port_address=self.open_port
         )
         self.speech_interception = SpeechInterception(
             client=self.client,
             data=self.data,
-            activation_name='小龙',
+            activation_name='龙',
             communicate_queue=self.communicate_queue,
+            text_queue=self.text_queue,
             serial_port_address=self.open_port
         )
 
@@ -95,7 +99,7 @@ class Main:
             if self.data['triggered_process'] == 1:
                 print('vision process')
                 self.vision_processing.run()
-            elif self.data['triggered_process']==2:
+            elif self.data['triggered_process'] == 2:
                 print('speech interception')
                 self.speech_interception.run()
             else:
@@ -106,9 +110,9 @@ class Main:
             time.sleep(2)
 
 
-def run_ui(data_queue):
+def run_ui(data_queue,text_queue):
     app = QApplication(sys.argv)
-    ui = SmartTrashCanUI(data_queue)
+    ui = SmartTrashCanUI(data_queue,text_queue)
     ui.show()
     sys.exit(app.exec_())
 
@@ -116,7 +120,7 @@ def run_ui(data_queue):
 if __name__ == '__main__':
     multiprocessing.set_start_method("spawn") if platform.system() == 'Darwin' else None  # 或 "forkserver"
     main_process = Main()
-    ui_process = Process(target=run_ui, args=(main_process.communicate_queue,))
+    ui_process = Process(target=run_ui, args=(main_process.communicate_queue,main_process.text_queue))
     ui_process.start()
     main_process.run()
     ui_process.join()

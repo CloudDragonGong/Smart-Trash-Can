@@ -21,8 +21,9 @@ class RemoveProcessing(Processing):
             _,file_path = self.wait_voice(self.data,'remove_processing')
             self.server_info_transfer(messages={},mp3_filename=file_path)
             receive_dict = self.server_info_recv(mode='dict')
+            self.update_input_text(receive_dict['input_text']) # update text timely
             self.garbage_type = receive_dict['garbage_type']
-            self.update_input_text(receive_dict['input_text'])
+            self.update_input_text(text=' ')
         self.embedded_info_transfer(2, self.message_open_can[self.garbage_type])
         self.update_data()
         self.UI_info_transfer()

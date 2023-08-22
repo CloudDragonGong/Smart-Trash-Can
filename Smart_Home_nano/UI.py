@@ -12,7 +12,7 @@ import queue
 
 
 class SmartTrashCanUI(QMainWindow):
-    def __init__(self, data_queue):
+    def __init__(self, data_queue,text_queue):
         super().__init__()
         self.captions = None
         self.input_text = None
@@ -60,21 +60,31 @@ class SmartTrashCanUI(QMainWindow):
         self.setCentralWidget(container)
 
         self.data_queue = data_queue
+        self.text_queue = text_queue
         self.update_timer = QTimer(self)
         self.update_timer.timeout.connect(self.update_display)
         self.update_timer.timeout.connect(self.update_datetime)
+        self.update_timer.timeout.connect(self.update_text)
         captions_thread = threading.Thread(target=self.display_captions)
         input_text_thread = threading.Thread(target=self.display_input_text)
         captions_thread.start()
-        input_text_thread.start()
-        self.update_timer.start(1000)  # Simulated data update interval (1 second)
+        #input_text_thread.start()
+        self.update_timer.start(10)  # Simulated data update interval (1 second)
+
+    def update_text(self):
+        if self.text_queue:
+            try:
+                text =self.text_queue.get_nowait()
+                self.input_text = text
+                self.show_input_text(self.input_text)
+            except queue.Empty:
+                pass
 
     def update_display(self):
         if self.data_queue:
             try:
                 data = self.data_queue.get_nowait()  # 设置超时时间，避免一直等待
                 self.captions = data['captions']
-                self.input_text = data['input_text']
                 full_load_data = data['full_load']
                 number_of_launch_data = data['number_of_launch']
 
@@ -87,8 +97,9 @@ class SmartTrashCanUI(QMainWindow):
                     label.setText(f"{waste_type} 投放次数: {launch_count}")
 
             except queue.Empty:
-                print("Queue is empty, stopping consumer.")
-        print(self.captions)
+                pass
+        if self.captions:
+            print(self.captions)
 
     def update_datetime(self):
         current_datetime = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
@@ -97,7 +108,7 @@ class SmartTrashCanUI(QMainWindow):
     def display_captions(self):
         while True:
             if self.captions:
-                if len(self.captions) < 50:
+                if len(self.captions) < 30:
                     self.show_caption(self.captions)
                 else:
                     segmentation_captions = self.split_string_by_punctuation(self.captions, self.punctuation_marks)
@@ -113,12 +124,10 @@ class SmartTrashCanUI(QMainWindow):
 
     def show_input_text(self, text):
         self.text_label.setText(text)
-        time.sleep(2)
-        self.text_label.setText('')
 
     def show_caption(self, caption):
         self.captions_label.setText(caption)
-        time.sleep(0.23 * len(caption))
+        time.sleep(0.24 * len(caption))
         self.captions_label.setText('')
 
     def split_string_by_punctuation(self, input_string, punctuation_marks):

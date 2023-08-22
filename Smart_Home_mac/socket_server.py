@@ -14,11 +14,12 @@ class Server:
         print(f"连接来自: {self.client_address}")
 
     def receive_string(self):
-        data = self.client_socket.recv(1024)
-        if data:
-            decoded_data = data.decode("utf-8")
-            print(f"收到字符串: {decoded_data}")
-            return decoded_data
+        while True:
+            data = self.client_socket.recv(1024)
+            if data:
+                decoded_data = data.decode("utf-8")
+                print(f"收到字符串: {decoded_data}")
+                return decoded_data
 
     def receive_mp3(self, file_path):
         print('开始接收mp3文件')
@@ -36,21 +37,22 @@ class Server:
         return file_path
 
     def receive_dict(self):
-        data = self.client_socket.recv(1024)
-        if data:
-            decoded_data = data.decode("utf-8")
-            deserialized_dict = json.loads(decoded_data)
-            print("收到字典数据:", deserialized_dict)
-            return deserialized_dict
+        while True:
+            data = self.client_socket.recv(1024)
+            if data:
+                decoded_data = data.decode("utf-8")
+                deserialized_dict = json.loads(decoded_data)
+                print("收到字典数据:", deserialized_dict)
+                return deserialized_dict
 
     def send_string(self, text):
         self.client_socket.sendall(text.encode("utf-8"))
-        print("字符串已发送")
+        print("字符串已发送:"+text)
 
     def send_dict(self, dictionary):
         serialized_dict = json.dumps(dictionary)
         self.client_socket.sendall(serialized_dict.encode("utf-8"))
-        print("字典已发送")
+        print(f"字典已发送 , {dictionary}")
 
     def send_mp3(self, mp3_file_path):
         with open(mp3_file_path, "rb") as file:

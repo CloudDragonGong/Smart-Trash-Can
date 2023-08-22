@@ -31,12 +31,12 @@ class Client:
 
     def send_string(self, text):
         self.client_socket.sendall(text.encode("utf-8"))
-        print("字符串已发送")
+        print("字符串已发送:"+text)
 
     def send_dict(self, dictionary):
         serialized_dict = json.dumps(dictionary)
         self.client_socket.sendall(serialized_dict.encode("utf-8"))
-        print("字典已发送")
+        print(f"字典已发送{dictionary}")
 
     def receive_string(self,length=1024):
         while True:
@@ -51,6 +51,7 @@ class Client:
             if data:
                 data = data.decode('utf-8')
                 dictionary = json.loads(data)
+                print(f'recevied dict:{dictionary}')
                 return dictionary
 
     def receive_mp3(self, mp3_filename):

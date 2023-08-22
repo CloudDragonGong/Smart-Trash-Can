@@ -34,10 +34,14 @@ class AudioProcessing(Processing):
             receive_dict = self.server_info_recv(mode='dict')
             self.garbage_type = receive_dict['garbage_type']
             self.update_input_text(text=receive_dict['input_text'])
-        self.audio_play(self.mp3_filename[self.garbage_type])
+        self.data['number_of_launch'][int(self.garbage_type_str_to_num[self.garbage_type])] = \
+            self.data['number_of_launch'][int(self.garbage_type_str_to_num[self.garbage_type])] + 1
+        self.update_input_text(' ')
+        self.update_captions(self.garbage_type)
         self.embedded_info_transfer(1, self.message_open_can[self.garbage_type])
         self.embedded_info_recv()
         self.update_data()
         self.UI_info_transfer()
+        self.update_input_text(' ')
         time.sleep(1)
         self.server_info_transfer(messages=['update data', self.data])

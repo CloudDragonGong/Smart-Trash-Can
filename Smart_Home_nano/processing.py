@@ -33,14 +33,23 @@ class Processing:
             data,
             client,
             communicate_queue=None,
+            text_queue=None,
             serial_port_address="/dev/ttyUSB0",
             serial_baud_rate=9600,
     ):
+        self.text = None
+        self.text_queue = text_queue
         self.message_open_can = {
             '其他垃圾': [[0x2C], [0x12], [0x00], [0x5B]],
             '厨余垃圾': [[0x2C], [0x12], [0x01], [0x5B]],
             '可回收垃圾': [[0x2C], [0x12], [0x02], [0x5B]],
             '有害垃圾': [[0x2C], [0x12], [0x03], [0x5B]]
+        }
+        self.garbage_type_str_to_num = {
+            '其他垃圾': 0,
+            '厨余垃圾': 1,
+            '可回收垃圾': 2,
+            '有害垃圾': 3
         }
         self.message_close_can = [[0x2C], [0x12], [0x04], [0x00], [0x5B]]
         self.client = client
@@ -48,7 +57,7 @@ class Processing:
         self.communicate_queue = communicate_queue
         self.garbage_type = None
         self.serial_port_address = serial_port_address
-        self.ser = self.ser = serial.Serial(serial_port_address, baudrate=serial_baud_rate, timeout=0.5)
+        self.ser = serial.Serial(serial_port_address, baudrate=serial_baud_rate, timeout=0.5)
 
     def audio_play(self, file_path):
         sound = AudioSegment.from_mp3(file_path)
@@ -58,7 +67,7 @@ class Processing:
         output_filename = os.path.join('voice', filename + '.mp3')
         output_wav = os.path.join('voice', filename + '.wav')
         #  ensure data[if_begin]= false or data['triggered_process'] is the right process
-        if_ok = real_time_recording_of_audio(data, output_filename=output_filename,
+        if_ok = real_time_recording_of_audio(data, process_class=self, output_filename=output_filename,
                                              output_wav=output_wav)
         return if_ok, output_filename
 
@@ -101,8 +110,22 @@ class Processing:
             return True
 
     def update_input_text(self, text):
-        self.data['input_text'] = text
-        self.UI_info_transfer()
+        self.text = text
+        self.UI_text_transfer()
+
+    def UI_text_transfer(self):
+        if self.text_queue is not None:
+            try:
+                if self.text_queue.full():
+                    try:
+                        self.text_queue.get_nowait()
+                    except queue.Empty:
+                        pass
+                self.text_queue.put_nowait(self.text)
+            except queue.Full:
+                print('queue is Full')
+        else:
+            print('text_queue is None')
 
     def UI_info_transfer(self):
         if self.communicate_queue is not None:
@@ -139,10 +162,14 @@ class Processing:
         print('embedding_into_transfer is Done')
 
     def recv(self):
+        start_time = time.time()  # 记录开始时间
         while True:
             data = self.ser.read(1)
             print(data)
-            if data == b"" :
+            if data == b"":
+                elapsed_time = time.time() - start_time  # 计算经过的时间
+                if elapsed_time > 15:  # 如果超过15秒，抛出异常
+                    raise TimeoutError("No data received for 15 seconds.")
                 continue
             else:
                 break
@@ -157,34 +184,34 @@ class Processing:
         - 4 完成校验位
         - 5 包尾
         Returns:
-
+            7秒没读到，自动退出
         """
         time.sleep(1)
         data = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
 
         print("开始等待读取")
         if_begin = False
-        recv_num = 0 
-        while True:
-            data_recv = self.recv()
-            data_recv = int.from_bytes(data_recv, byteorder="big")
-            print(data_recv)
-            if data_recv == 0x2C:
-                if_begin = True
-            if if_begin:
-                data[recv_num] = data_recv
-                recv_num = recv_num +1 
-            if recv_num == len(data):
-                break
-            # data[i]=ser.read(1)
-            # print(data[i])
-            # data[i]=int.from_bytes(data[i],byteorder='big')
-        print("读取完成:"+str(data))
-        garbage_type = ['其他垃圾', '厨余垃圾', ' 可回收垃圾 ', '有害垃圾']
-        if data[0] == 0x2C and data[1] == 0x12:
-            self.data['full_load'][garbage_type[data[3]]] = bool(data[2])
-        else:
-            print('包头错误')
+        recv_num = 0
+        try:
+            while True:
+                data_recv = self.recv()
+                data_recv = int.from_bytes(data_recv, byteorder="big")
+                print(data_recv)
+                if data_recv == 0x2C:
+                    if_begin = True
+                if if_begin:
+                    data[recv_num] = data_recv
+                    recv_num = recv_num + 1
+                if recv_num == len(data):
+                    break
+            print("读取完成:" + str(data))
+            garbage_type = ['其他垃圾', '厨余垃圾', ' 可回收垃圾 ', '有害垃圾']
+            if data[0] == 0x2C and data[1] == 0x12:
+                self.data['full_load'][garbage_type[data[3]]] = bool(data[2])
+            else:
+                print('包头错误')
+        except TimeoutError as e:
+            print(e)
         print('embedded_info_transfer is Done')
 
 

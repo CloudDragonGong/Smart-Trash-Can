@@ -4,6 +4,7 @@ from pydub import AudioSegment
 import wave
 import os
 import time
+
 """
 实时录制音频并保存为MP3文件
 
@@ -28,6 +29,7 @@ import time
 
 def real_time_recording_of_audio(
         data_outside,
+        process_class=None,
         format_=pyaudio.paInt16,
         channels=1,
         rate=16000,
@@ -46,8 +48,7 @@ def real_time_recording_of_audio(
     non_mute_times = 0
     triggered_response_gate = False
 
-
-    while( not data_outside['if_begin']) or data_outside['triggered_process'] == 2 :
+    while (not data_outside['if_begin']) or data_outside['triggered_process'] == 2:
         data = stream.read(chunk)
         audio_data = np.frombuffer(data, dtype=np.int16)
         volume = np.abs(audio_data).mean()
@@ -63,6 +64,8 @@ def real_time_recording_of_audio(
 
         if non_mute_times > response_time_threshold * rate / chunk or triggered_response_gate:
             print('触发响应门')
+            if process_class is not None:
+                process_class.update_input_text('聆听中')
             frames.append(data)
             triggered_response_gate = True
 
@@ -70,7 +73,8 @@ def real_time_recording_of_audio(
                 mute_times += 1
             else:
                 mute_times = 0
-
+            if process_class is not None:
+                process_class.update_input_text(' ')
             if mute_times > end_time_threshold * rate / chunk:
                 stream.stop_stream()
                 stream.close()
@@ -86,7 +90,7 @@ def real_time_recording_of_audio(
 
                 audio = AudioSegment.from_wav(output_wav)
                 audio.export(output_filename, format="mp3")
-                print("MP3文件保存成功."+output_filename)
+                print("MP3文件保存成功." + output_filename)
 
                 return True
     return False
@@ -102,6 +106,7 @@ def delete_mp3_files(directory):
 
 def real_time_recording_of_audio_timeout(
         format_=pyaudio.paInt16,
+        process_class=None,
         channels=1,
         rate=16000,
         chunk=1024,
@@ -140,12 +145,14 @@ def real_time_recording_of_audio_timeout(
             print('触发响应门')
             frames.append(data)
             triggered_response_gate = True
-
+            if process_class is not None:
+                process_class.update_input_text('聆听中')
             if volume < 500:
                 mute_times += 1
             else:
                 mute_times = 0
-
+            if process_class is not None:
+                process_class.update_input_text(' ')
             if mute_times > end_time_threshold * rate / chunk:
                 stream.stop_stream()
                 stream.close()
@@ -164,13 +171,6 @@ def real_time_recording_of_audio_timeout(
                 print("MP3文件保存成功.")
 
                 return True
-
-        # 如果已经等待的时间超过了最大等待时间，就退出函数并返回 False
-        if time.time() - start_time > max_waiting_time:
-            stream.stop_stream()
-            stream.close()
-            audio.terminate()
-            return False
 
 
 # 使用函数

@@ -155,7 +155,7 @@ def transform(response, file_name_):
 
 
 if __name__ == "__main__":
-    file_name = '当前是成堆模式，没听清楚您在说什么垃圾，请再次说出您要投放的垃圾'
+    file_name = '好的，取出垃圾吧，亲'
     file_path = file_name+'.mp3'
     time1 = datetime.now()
     transform(file_name, file_path)
