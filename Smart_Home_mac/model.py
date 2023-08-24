@@ -16,16 +16,22 @@ class Model:
             self.messages.append({"role": "system", "content": prompt})
 
     def response(self, text):
-        self.messages.append({"role": "user", "content": text})
-        response = openai.ChatCompletion.create(
-            model="gpt-4-0613",
-            messages=self.messages,
-            temperature=0.5,
-        )
-        result = ''
-        for choice in response.choices:
-            result += choice.message.content
-        return result
+        while True:
+            try:
+                self.messages.append({"role": "user", "content": text})
+                response = openai.ChatCompletion.create(
+                    model="gpt-4-0613",
+                    messages=self.messages,
+                    temperature=0.5,
+                )
+                result = ''
+                for choice in response.choices:
+                    result += choice.message.content
+                print(result)
+                return result
+            except Exception:
+                print('response error  continue')
+                pass
 
     def add_system_prompt(self, prompt):
         self.messages.append({"role": "system", "content": prompt})

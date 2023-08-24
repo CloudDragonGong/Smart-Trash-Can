@@ -1,4 +1,7 @@
 import os
+import time
+
+import openai.error
 
 from model import Model
 from socket_server import Server
@@ -28,11 +31,11 @@ class ProcessChat:
 
     def classify(self, text):
 
-        text_keywords = extract_keywords(text)
-        garbage_name = text_keywords[0]
+        # text_keywords = extract_keywords(text)
         model = Model()
         input = f"""
-        请你将“{garbage_name}”分类为1.可回收垃圾 2.有害垃圾 3.其他垃圾 4.厨余垃圾 中的一种/
+        提取出{text}里的垃圾(物品)种类，然后进行分类/
+        分类为1.可回收垃圾 2.有害垃圾 3.其他垃圾 4.厨余垃圾 中的一种/
         不用解释原因，直接回答类别
         """
         garbage_type_str = model.response(input)
@@ -49,16 +52,31 @@ class ProcessChat:
 
         return None
 
+    def classify_can_name(self,text):
+        keywords_ = {
+            "可回收": "可回收垃圾",
+            "有害": "有害垃圾",
+            "其他": "其他垃圾",
+            "厨余": "厨余垃圾",
+            '厨房': "厨余垃圾"
+        }
+        for keyword, category in keywords_.items():
+            if keyword in text:
+                return category
+        return None
+
     def match_mode(self, input_text):
-        prompt = f"你需要将接下来对话的模式分类，分为：1.分类模式（用户请求你将垃圾进行分类），2.成堆投放（连续投放）模式，3.取垃圾桶模式（就是把垃圾桶取出来然后倒掉里面的垃圾，清空里面的垃圾）4"
+        prompt = f"你需要将接下来对话的模式分类，分为：1.分类模式（用户请求你将少量的垃圾进行分类），2.成堆投放（连续投放）模式，3.取垃圾桶模式（就是用户明确想请求把垃圾桶取出来然后倒掉里面的垃圾，清空里面的垃圾）4"
         ".聊天模式（不是上面3"
-        "种模式的话就是聊天模式）"
+        "种模式的话就是聊天模式，就是除了上面三种模式，其余的就是聊天模式，用户可能会和你闲聊，用户可能还会询问你一些垃圾桶系统的一些状况，例如垃圾桶的满载情况，哪个垃圾桶装满了？0或者投放频率啥的，你就返回聊天模式）"
         model = Model(prompt)
         return model.response(input_text)
 
     def mode_classify(self, text):
         text_keywords = extract_keywords(text)
+
         mode_type = self.match_mode(text)
+
         if mode_type is None:
             mode_type = '聊天模式'
         keywords = ["分类模式", "成堆投放模式"]
@@ -157,7 +175,7 @@ class ProcessChat:
             else:
                 self.data = self.server.receive_dict()
                 return False
-        except SystemError:
+        except Exception:
             self.server.send_dict({'0': False})  # 报错消息string发送，提醒对方再次发送
             print('recv is error')
 
@@ -193,7 +211,7 @@ class ProcessChat:
             self.classify_mode()
         elif mode_type == '成堆投放模式':
             self.stacked_release_mode()
-        elif mode_type == '倒垃圾模式':
+        elif mode_type == '取垃圾桶模式':
             self.dumping_mode()
         elif mode_type == '聊天模式':
             self.chat_mode(text)
@@ -204,6 +222,7 @@ class ProcessChat:
         while self.garbage_type is None:
             file_path = self.server.receive_mp3(self.receive_again_mp3_path)
             text = self.mp3_to_text(file_name=file_path)
+            self.send_dict(text=text)
             self.garbage_type = self.classify(text)
             self.send_dict(text=text)
         self.recv_begin_or_data()
@@ -234,7 +253,7 @@ class ProcessChat:
             self.server.receive_mp3(self.receive_again_mp3_path)
             text = self.mp3_to_text(self.receive_again_mp3_path)
             self.send_dict(text=text)  # send the text
-            self.garbage_type = self.classify(text)
+            self.garbage_type = self.classify_can_name(text)
             self.send_dict(text=text)  # send the garbage_type
         print('dumping_mode is done')
         self.recv_begin_or_data()

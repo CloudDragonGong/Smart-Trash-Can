@@ -30,10 +30,18 @@ class AudioProcessing(Processing):
         while self.garbage_type is None:
             self.update_captions('当前是分类模式，没听清楚您在说什么，请再次说出您要分类的垃圾')
             _, mp3_filename = self.wait_voice(self.data,filename='audio_processing')
+
+            self.update_input_text('正在识别中')
             self.server_info_transfer(messages={},mp3_filename=mp3_filename)
-            receive_dict = self.server_info_recv(mode='dict')
-            self.garbage_type = receive_dict['garbage_type']
+
+            receive_dict = self.server_info_recv(mode='dict')   # receive the text
             self.update_input_text(text=receive_dict['input_text'])
+
+            receive_dict = self.server_info_recv(mode='dict')  # receive the garbage type
+            self.garbage_type = receive_dict['garbage_type']
+
+            self.update_input_text(' ')
+            time.sleep(1)
         self.data['number_of_launch'][int(self.garbage_type_str_to_num[self.garbage_type])] = \
             self.data['number_of_launch'][int(self.garbage_type_str_to_num[self.garbage_type])] + 1
         self.update_input_text(' ')

@@ -84,7 +84,9 @@ class Processing:
                 self.client.send_string(message)
             elif isinstance(message, dict):
                 self.client.send_dict(message)
+            time.sleep(0.2)
         if mp3_filename is not None:
+            time.sleep(0.2)
             self.client.send_mp3(mp3_filename)
         print(f'server_info_transfer in {self.__class__.__name__} is done')
 
@@ -205,7 +207,7 @@ class Processing:
                 if recv_num == len(data):
                     break
             print("读取完成:" + str(data))
-            garbage_type = ['其他垃圾', '厨余垃圾', ' 可回收垃圾 ', '有害垃圾']
+            garbage_type = ['其他垃圾', '厨余垃圾', '可回收垃圾', '有害垃圾']
             if data[0] == 0x2C and data[1] == 0x12:
                 self.data['full_load'][garbage_type[data[3]]] = bool(data[2])
             else:

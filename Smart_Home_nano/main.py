@@ -59,7 +59,7 @@ class Main:
         self.communicate_queue = Queue(1)
         self.text_queue = Queue(1)
 
-        self.client = Client(ip='127.0.0.1', port=8001) if platform.system() == 'Darwin' else Client(ip='172.20.10.5',
+        self.client = Client(ip='127.0.0.1', port=8001) if platform.system() == 'Darwin' else Client(ip='192.168.43.17',
                                                                                                      port=8001)
         self.resnet = Resnet()
         self.open_port = '/dev/tty.Bluetooth-Incoming-Port' if platform.system() == 'Darwin' else "/dev/ttyUSB0"
@@ -79,6 +79,8 @@ class Main:
             text_queue=self.text_queue,
             serial_port_address=self.open_port
         )
+        time.sleep(1)
+        self.vision_processing.init_background()
 
     def update_data(self):
         self.data['garbage_type'] = None
@@ -107,7 +109,7 @@ class Main:
 
             self.data['if_begin'] = False
             print('finish a cycle')
-            time.sleep(2)
+            time.sleep(1)
 
 
 def run_ui(data_queue,text_queue):

@@ -1,15 +1,6 @@
-class A:
-    def a(self):
-        print('okk')
+from  multiprocessing  import Queue
+q = Queue(1)
 
-    def b(self):
-        bb(self)
-
-
-aa = A()
-
-
-def bb(class_A):
-    class_A.a()
-
-aa.b()
+if q is None:
+    print('ok')
+print('no')

@@ -99,8 +99,7 @@ class SmartTrashCanUI(QMainWindow):
             except queue.Empty:
                 pass
         if self.captions:
-            print(self.captions)
-
+            pass
     def update_datetime(self):
         current_datetime = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
         self.datetime_label.setText(current_datetime)

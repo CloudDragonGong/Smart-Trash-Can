@@ -1,5 +1,6 @@
 import socket
 import json
+import sys
 import time
 
 
@@ -24,6 +25,9 @@ class Server:
     def receive_mp3(self, file_path):
         print('开始接收mp3文件')
         with open(file_path, "wb") as file:
+            received_bytes = 0
+            total_bytes = 1000  # Update this value with the total file size
+
             while True:
                 data = self.client_socket.recv(1024)
                 if not data:
@@ -33,7 +37,13 @@ class Server:
                     file.write(data)
                     break
                 file.write(data)
-            print("MP3文件接收完毕")
+
+                received_bytes += len(data)
+                progress = (received_bytes / total_bytes) * 100
+                sys.stdout.write(f"\r进度：[{progress:.2f}%] {int(progress)}%")
+                sys.stdout.flush()
+
+            print("\nMP3文件接收完毕")
         return file_path
 
     def receive_dict(self):
@@ -62,8 +72,10 @@ class Server:
             print("MP3文件已发送")
 
     def __del__(self):
+        if hasattr(self, 'client_socket'):
+            self.client_socket.close()
         self.server_socket.close()
-        self.client_socket.close()
+
 
 
 if __name__ == '__main__':

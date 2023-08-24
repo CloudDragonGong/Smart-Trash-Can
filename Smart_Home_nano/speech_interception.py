@@ -153,7 +153,8 @@ class SpeechInterception:
             data=self.data,
             client=self.client,
             communicate_queue=self.communicate_queue,
-            serial_port_address=self.serial_port_address
+            serial_port_address=self.serial_port_address,
+            text_queue=self.text_queue
         )
         self.update_captions('好的，正在为您分类')
         self.update_input_text(' ')
@@ -164,6 +165,7 @@ class SpeechInterception:
             garbage_type=self.garbage_type,
             data=self.data,
             communicate_queue=self.communicate_queue,
+            text_queue=self.text_queue,
             client=self.client,
             serial_port_address=self.serial_port_address,
         )
@@ -175,6 +177,7 @@ class SpeechInterception:
             garbage_type=self.garbage_type,
             data=self.data,
             communicate_queue=self.communicate_queue,
+            text_queue=self.text_queue,
             client=self.client,
             serial_port_address=self.serial_port_address
         )

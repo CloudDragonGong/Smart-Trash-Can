@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-
+import time
 from processing import Processing
 
 
@@ -20,6 +20,12 @@ class VisionProcessing(Processing):
             '厨余垃圾': r'voice/厨余垃圾.mp3',
             '有害垃圾': r'voice/有害垃圾.mp3'
         }
+        self.background = None
+
+    def init_background(self):
+        self.open_camera()
+        self.background = self.frame
+        self.close_camera()
 
     def open_camera(self):
         self.cap = cv2.VideoCapture(0)
@@ -28,15 +34,21 @@ class VisionProcessing(Processing):
             cv2.imwrite('test_cap.png', self.frame)
             return True
         except:
-            #print('************error of camera****************')
             return False
 
     def close_camera(self):
         self.cap.release()
 
+    def detect_object_in_frame(self, background, current_frame, threshold=100):
+        diff = cv2.absdiff(background, current_frame)
+        _, diff_thresholded = cv2.threshold(diff, threshold, 255, cv2.THRESH_BINARY)
+        diff_count = np.count_nonzero(diff_thresholded)
+        print('*****************************'+str(diff_count) + '**************************')
+        return diff_count > 0
+
     def classifier(self):
+
         flag = self.resnet.classify(self.frame)
-        #print(f'flag= {flag}')
         if flag == 0:
             self.garbage_type = "其他垃圾"
         elif flag == 1:
@@ -44,13 +56,7 @@ class VisionProcessing(Processing):
         elif flag == 2:
             self.garbage_type = "可回收垃圾"
         elif flag == 3:
-            # if type is harmful waste , calculate the pixel
-            pixel_count = self.process_image()
-            print(pixel_count)
-            if pixel_count > 310000:
-                self.garbage_type = "有害垃圾"
-            else:
-                self.garbage_type = None
+            self.garbage_type = "有害垃圾"
         else:
             self.garbage_type = None
         print(self.garbage_type)
@@ -64,10 +70,8 @@ class VisionProcessing(Processing):
         self.data['garbage_type'] = self.garbage_type
 
     def identify(self):
-        #print(f"begin state:{self.data['if_begin']}")
-        # continuous identify
         while not self.data['if_begin']:
-            if self.open_camera() and self.classifier():
+            if self.open_camera() and self.detect_object_in_frame(self.background, self.frame) and self.classifier():
                 cv2.imwrite('cap.png', self.frame)
                 self.close_camera()
                 self.data['if_begin'] = True
@@ -91,5 +95,6 @@ class VisionProcessing(Processing):
         self.embedded_info_recv()
         self.UI_info_transfer()
         self.update_data()
+        time.sleep(1)
         self.server_info_transfer(messages=['update data', self.data])
         print('vision_processing is done')
