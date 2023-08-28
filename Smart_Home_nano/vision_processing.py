@@ -25,6 +25,7 @@ class VisionProcessing(Processing):
     def init_background(self):
         self.open_camera()
         self.background = self.frame
+        cv2.imwrite(self.background, 'background.png')
         self.close_camera()
 
     def open_camera(self):
@@ -43,8 +44,8 @@ class VisionProcessing(Processing):
         diff = cv2.absdiff(background, current_frame)
         _, diff_thresholded = cv2.threshold(diff, threshold, 255, cv2.THRESH_BINARY)
         diff_count = np.count_nonzero(diff_thresholded)
-        print('*****************************'+str(diff_count) + '**************************')
-        return diff_count > 0
+        print('*****************************' + str(diff_count) + '**************************')
+        return diff_count > 100000
 
     def classifier(self):
 

@@ -37,7 +37,7 @@ class SmartTrashCanUI(QMainWindow):
 
         self.captions_label = QLabel("字幕区域")
         self.captions_label.setAlignment(Qt.AlignCenter)
-        self.text_label = QLabel('input_text')
+        self.text_label = QLabel('请说话或者投放垃圾')
         self.text_label.setAlignment(Qt.AlignCenter)
 
         self.datetime_label = QLabel()

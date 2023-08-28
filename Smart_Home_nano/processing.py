@@ -134,7 +134,8 @@ class Processing:
             try:
                 self.communicate_queue.put_nowait(self.data)
             except queue.Full:
-                print('queue is Full')
+                # print('queue is Full')
+                pass
         else:
             print('communicate_queue is None')
 

@@ -81,6 +81,7 @@ class Main:
         )
         time.sleep(1)
         self.vision_processing.init_background()
+        self.vision_processing.update_input_text('请说话或者投放垃圾')
 
     def update_data(self):
         self.data['garbage_type'] = None
