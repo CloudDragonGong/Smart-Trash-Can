@@ -49,7 +49,7 @@ def real_time_recording_of_audio(
         data = stream.read(chunk)
         audio_data = np.frombuffer(data, dtype=np.int16)
         volume = np.abs(audio_data).mean()
-        print(f"音量大小: {volume}")
+        # print(f"音量大小: {volume}")
 
         if not triggered_response_gate:
             if volume > 100:

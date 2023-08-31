@@ -60,10 +60,10 @@ import AI_module
 from lock import Lock
 from voice_assitant import VoiceAssistant
 from voice_assitant import voice_assistant_stupid
-import IFlytek
 from IFlytek import IFlytek_assistant
-
-# UI显示的字典 测试使用
+from voice_assitant import real_time_recording_of_audio
+from voice_assitant import stt
+# UI显示的字典
 UIinformation = {
     "garbageCategory": None,
     "fullLoad": False,
@@ -71,9 +71,10 @@ UIinformation = {
     "TotalNumber": 0,
 }
 
-# 运行视觉模块  测试使用
+# 运行视觉模块
 def run_VM(q, AI):
     AI.LoadModel()
+    # AI_module.AIModule.LoadModel(load_path)
     VM = cv_module.Vision_Module(q=q,AI_module=AI)
     VM.run()
 
@@ -85,36 +86,28 @@ def run_UI(UIQ):
     UI_object.setupUi()
     app.exec_()
 
-
+def run_stt():
+    while(1):
+        if (real_time_recording_of_audio.real_time_recording_of_audio(
+            output_filename=r'voice/recording.mp3',
+            output_wav=r'voice/recording.wav'
+        )):
+            speech=stt.transform(r'voice/recording.mp3')
+            print(speech)
+        
 if __name__ == "__main__":
-    # 两个用于传输信息的消息队列
+    # 用于传输信息的消息队列
     UIQ = Queue(1)
     voice_assistant_communication_queue = Queue(1)
-    # multiprocessing.freeze_support() # windows需要加这行代码，linux不需要
-    load_path = "model_best_checkpoint_resnet181.onnx"
-    #load_path='model_best_checkpoint_resnet181.pth.tar'
+    multiprocessing.freeze_support()
+    load_path = "model_best_checkpoint_resnet181.pth.tar"
     p2 = Process(target=run_UI, args=(UIQ,))
     p2.start()
     AI = AI_module.AIModule(load_path=load_path)
-    AI.LoadModel()
-    VM = cv_module.Vision_Module(cameraPath2=None,q=UIQ,AI_module=AI,serial_port_address=None,voice_assistant_communication_queue=voice_assistant_communication_queue)
-    # voice_assist = VoiceAssistant.VoiceAssistant(voice_assistant_communication_queue=voice_assistant_communication_queue,gpt_key="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",output_filename=r'voice/recording.mp3',output_wav=r'voice/recordning.wav',information=VM.get_information())
-    # voice_assist.start()
-   # voice_assist=voice_assistant_stupid.VoiceAssistantStupid(voice_assistant_communication_queue=voice_assistant_communication_queue)
-   # voice_assist.start()
-
-    assistant = IFlytek_assistant(
-        r"voice/response.mp3",
-        r"voice/response.wav",
-        r"docs/questions.txt",
-        r"docs/answers.txt",
-        r"docs/keywords.txt",
-        machine_running=VM.machine_running,
-        if_need_update_keywords=False,
-        SparkApi_switch=False,
-        information=VM.get_information_now()
-    )
-    assistant.start()
+    VM = cv_module.Vision_Module(q=UIQ,AI_module=AI,serial_port_address=None,voice_assistant_communication_queue=voice_assistant_communication_queue)
+    thread = threading.Thread(target=run_stt)
+    thread.start()
     VM.run()
+    
     
     

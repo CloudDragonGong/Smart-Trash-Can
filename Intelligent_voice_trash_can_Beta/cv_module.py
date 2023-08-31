@@ -68,7 +68,7 @@ def edge_demo(image):
     return edge_output
 
 
-def detectSpam(frame, frame2, maskPath):
+def detectSpam(frame, frame2,maskPath,frame2_valid=True):
     cv2.imwrite("img//frame.jpg", frame)
     global num0
     global detect
@@ -84,7 +84,7 @@ def detectSpam(frame, frame2, maskPath):
     num1 = cv2.countNonZero(src=edge)
 
     # dst = unevenLightCompensate(frame2, 16)
-    if frame2 == None:
+    if frame2_valid == False:
         num2=0
     else:
         edge = edge_demo(frame2)
@@ -98,11 +98,11 @@ def detectSpam(frame, frame2, maskPath):
         num0 = num
     delta = num
     print("contour =%s" % (delta))
-    if delta > 80000:
-        # print('contour =%s'%(delta))
+    if delta > 7000:
+        #print('contour =%s'%(delta))
         num0 = num
         detect = detect + 1
-        if detect >= 1:
+        if detect >= 3:
             detect = 0
             return True
         else:
@@ -126,6 +126,8 @@ class Vision_Module:
         timeout=0.5,# 0.5秒连接超时
         serial_port_address="/dev/ttyUSB0",#串口位置
     ):
+        self.ser=serial.Serial('/dev/ttyUSB0',9600,timeout=timeout)
+        #self.ser.open()
         self.voice_assistant_communication_queue=voice_assistant_communication_queue
         self.cameraPath=cameraPath
         self.cameraPath2=cameraPath2
@@ -141,24 +143,24 @@ class Vision_Module:
         self.ifGarbage = False
         self.frameOut = None
         self.garbageType = None
-        self.totalNum = 7
+        self.totalNum = 0
         self.ifSuccess = False
         self.ifCompress = False
         self.fullLoad = False
-        self.kitchen_Waste = 2
-        self.recyclable_Trash = 3
-        self.hazardous_Waste = 2
-        self.other_Garbage = 0  # 记得改回来
+        self.kitchen_Waste = 0
+        self.recyclable_Trash = 0
+        self.hazardous_Waste = 0
+        self.other_Garbage = 0  
         self.trigger = False#是否在进行分类，如果是在进行分类，那么就阻塞countdown20s验满功能，在进行分类就是true，分完了就是false
         self.iftrigger = True#20s旋转验满功能开关，true就是开，false就是关
         self.qUIinformation = {
             "garbageCategory": None,
             "fullLoad": False,
             "ifSuccess": False,
-            "TotalNumber": 7,
-            "Kitchen waste":2 ,
-            "recyclable trash": 3,
-            "hazardous waste": 2,
+            "TotalNumber": 0,
+            "Kitchen waste": 0,
+            "recyclable trash": 0,
+            "hazardous waste": 0,
             "other garbage": 0,
             "serialOfGarbage": None,
             "ifBegin": False,
@@ -169,7 +171,10 @@ class Vision_Module:
         self.UIq = q
         self.mask_path = maskPath
         self.AI_module = AI_module
-    
+        self.machine_running=False
+
+    def get_information_now(self):
+        return self.qUIinformation
     def get_information(self):
         if self.voice_assistant_communication_queue.full():
             self.voice_assistant_communication_queue.get()
@@ -181,14 +186,23 @@ class Vision_Module:
             self.get_information()
             
     def camera(self):
-        reg, self.frame = self.cap.read()
-        cv2.imwrite("img//1.jpg", self.frame)
-        if self.cap2 !=None : reg, self.frame2 = self.cap2.read()
-        else : self.frame2 = None
-        # cv2.imwrite('img//2.jpg',self.frame2)
+        try:
+            reg, self.frame = self.cap.read()
+            cv2.imwrite("img//1.jpg", self.frame)
+            if self.cap2 !=None : reg, self.frame2 = self.cap2.read()
+            else : self.frame2 = None
+        except Exception as e:
+            print('error in cameta')
 
     def detectionModule(self):
-        return detectSpam(self.frame, self.frame2, maskPath=self.mask_path)
+        try:
+            if self.cap2==None:
+                return detectSpam(self.frame,self.frame2,frame2_valid=False,maskPath=self.mask_path)
+            else:
+                return detectSpam(self.frame, self.frame2, maskPath=self.mask_path)
+        except Exception as e:
+            print('error in detectionModule')
+            return False
 
     def CVModule(self):
         self.qUIinformation["ifBegin"] = True
@@ -227,9 +241,9 @@ class Vision_Module:
 
     def AIModule(self):
         self.frameOut = cv2.imread("img//1.jpg")
-        # flag = self.AI_module.module(self.frameOut)
-        # print("flag=" + str(flag))
-        flag=1
+        flag = self.AI_module.Module(self.frameOut)
+        print("flag=" + str(flag))
+        
 
         if flag == 0:
             self.garbageType = "其他垃圾"
@@ -267,23 +281,23 @@ class Vision_Module:
     def sendSerialInformation(self):
         print("正在发送数据")
 
-        # data = [[0x2C], [0x12], [0x00], [0x5B]]
-        # if self.garbageType == "其他垃圾":
-        #     data[2] = [0x00]
-        # elif self.garbageType == "厨余垃圾":
-        #     data[2] = [0x01]
-        # elif self.garbageType == "可回收垃圾":
-        #     data[2] = [0x02]
-        # elif self.garbageType == "有害垃圾":
-        #     data[2] = [0x03]
-        # else:
-        #     print("error")
-        #     exit()
-        # for i in range(0, 4):
-        #     data[i] = bytearray(data[i])
-        #     time.sleep(0.1)
-        #     print(data[i])
-        #     self.ser.write(data[i])
+        data = [[0x2C], [0x12], [0x00], [0x5B]]
+        if self.garbageType == "其他垃圾":
+            data[2] = [0x00]
+        elif self.garbageType == "厨余垃圾":
+            data[2] = [0x01]
+        elif self.garbageType == "可回收垃圾":
+            data[2] = [0x02]
+        elif self.garbageType == "有害垃圾":
+            data[2] = [0x03]
+        else:
+            print("error")
+            exit()
+        for i in range(0, 4):
+            data[i] = bytearray(data[i])
+            time.sleep(0.1)
+            print(data[i])
+            self.ser.write(data[i])
         print("sendSerialInformation done")
 
     def determineCompress(self):
@@ -300,88 +314,89 @@ class Vision_Module:
         return data
 
     def waitingForSerial(self):
-        # data = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+        data=[0x00,0x00,0x00,0x00,0x00,0x00,0x00]
 
-        # print("开始等待读取")
-        # for i in range(0, 7):
-        #     data[i] = self.recv()
-        #     data[i] = int.from_bytes(data[i], byteorder="big")
-        #     print(data[i])
-        #     # data[i]=ser.read(1)
-        #     # print(data[i])
-        #     # data[i]=int.from_bytes(data[i],byteorder='big')
-        # print("读取完成")
+        print('开始等待读取')
+        for i in range(0,7):
+            data[i]=self.recv()
+            data[i]=int.from_bytes(data[i],byteorder='big')
+            print(data[i])
+            #data[i]=ser.read(1)
+            #print(data[i])
+            #data[i]=int.from_bytes(data[i],byteorder='big')
+        print('读取完成')
+        if data[0]==0x2c and data[1]==0x12:
+            
+            self.qUIinformation['fullLoadGarbage20s']=False
+            self.qUIinformation['ifSuccess'] = True
 
-        # 分类成功之后，垃圾桶分类完成之后
-        # if data[0] == 0x2C and data[1] == 0x12:
-        #     self.qUIinformation["fullLoadGarbage20s"] = False
-        #     self.qUIinformation["ifSuccess"] = True
+           
+            for i in range(0,7):
+                print(data[i])
 
-        #     for i in range(0, 7):
-        #         print(data[i])
-        # 
-        # 更新满载情况
-        # 没有满载情况
-        #     if data[2] == 0x00:
-        #         self.fullLoad = False
-        #         self.qUIinformation["fullLoad"] = False
-        #         if data[3] == 0x00:
-        #             self.qUIinformation["fullLoadGarbage"] = 0
-        #         elif data[3] == 0x01:
-        #             self.qUIinformation["fullLoadGarbage"] = 1
-        #         elif data[3] == 0x02:
-        #             self.qUIinformation["fullLoadGarbage"] = 2
-        #         elif data[3] == 0x03:
-        #             self.qUIinformation["fullLoadGarbage"] = 3
-        #         else:
-        #             self.qUIinformation["fullLoadGarbage"] = None
-        # 有满载情况
-        #     elif data[2] == 0x01:
-        #         self.fullLoad = True
-        #         self.qUIinformation["fullLoad"] = True
-        # 十位为1代表满载，个位代表序号
-        #         if data[3] == 0x00:
-        #             self.qUIinformation["fullLoadGarbage"] = 10
-        #         elif data[3] == 0x01:
-        #             self.qUIinformation["fullLoadGarbage"] = 11
-        #         elif data[3] == 0x02:
-        #             self.qUIinformation["fullLoadGarbage"] = 12
-        #         elif data[3] == 0x03:
-        #             self.qUIinformation["fullLoadGarbage"] = 13
-        #         else:
-        #             self.qUIinformation["fullLoadGarbage"] = None
+            if data[2]==0x00:
+                self.fullLoad=False
+                self.qUIinformation['fullLoad']=False
+                if data[3]==0x00:
+                    self.qUIinformation['fullLoadGarbage']=0
+                elif data[3]==0x01:
+                    self.qUIinformation['fullLoadGarbage']=1
+                elif data[3]==0x02:
+                    self.qUIinformation['fullLoadGarbage']=2
+                elif data[3]==0x03:
+                    self.qUIinformation['fullLoadGarbage']=3
+                else:
+                    self.qUIinformation['fullLoadGarbage']=None
 
-        #     else:
-        #         self.qUIinformation["fullLoadGarbage"] = None
-        #     return True
+            elif data[2]==0x01:
+                self.fullLoad=True
+                self.qUIinformation['fullLoad']=True
+                if data[3]==0x00:
+                    self.qUIinformation['fullLoadGarbage']=10
+                elif data[3]==0x01:
+                    self.qUIinformation['fullLoadGarbage']=11
+                elif data[3]==0x02:
+                    self.qUIinformation['fullLoadGarbage']=12
+                elif data[3]==0x03:
+                    self.qUIinformation['fullLoadGarbage']=13
+                else:
+                    self.qUIinformation['fullLoadGarbage']=None
 
-        # # 5D、30、2A数据包结构   20s转盘后发送的信息   7位数 前两位是标注位，后4位是信息
-        # if data[0] == 0x5D and data[1] == 0x30:
-        #     self.qUIinformation["fullLoadGarbage20s"] = True
-        #     self.qUIinformation["fullLoadGarbage"] = [False, False, False, False]
-        #     for i in range(0, 7):
-        #         print(data[i])
+            else:
+                self.qUIinformation['fullLoadGarbage']=None
+            return True
 
-        #     if data[2] == True:
-        #         self.qUIinformation["fullLoadGarbage"][0] = True
-        #     else:
-        #         self.qUIinformation["fullLoadGarbage"][0] = False
-        #     if data[3] == True:
-        #         self.qUIinformation["fullLoadGarbage"][1] = True
-        #     else:
-        #         self.qUIinformation["fullLoadGarbage"][1] = False
-        #     if data[4] == True:
-        #         self.qUIinformation["fullLoadGarbage"][2] = True
-        #     else:
-        #         self.qUIinformation["fullLoadGarbage"][2] = False
-        #     if data[5] == True:
-        #         self.qUIinformation["fullLoadGarbage"][3] = True
-        #     else:
-        #         self.qUIinformation["fullLoadGarbage"][3] = False
-        #     self.if20s = True
-        #     return True
-        self.if20s = True
-        print("waitingForSerial have done")
+
+
+        #5D、30、2A数据包结构
+        if data[0]== 0x5D and data[1]== 0x30:
+
+
+            self.qUIinformation['fullLoadGarbage20s']=True
+            self.qUIinformation['fullLoadGarbage']=[False,False,False,False]
+            for i in range(0,7):
+                print(data[i])
+
+            if data[2]==True:
+                self.qUIinformation['fullLoadGarbage'][0]=True
+            else:
+                self.qUIinformation['fullLoadGarbage'][0]=False
+            if data[3]==True:
+                self.qUIinformation['fullLoadGarbage'][1]=True
+            else:
+                self.qUIinformation['fullLoadGarbage'][1]=False
+            if data[4]==True:
+                self.qUIinformation['fullLoadGarbage'][2]=True
+            else:
+                self.qUIinformation['fullLoadGarbage'][2]=False
+            if data[5]==True:
+                self.qUIinformation['fullLoadGarbage'][3]=True
+            else:
+                self.qUIinformation['fullLoadGarbage'][3]=False
+            self.if20s=True
+            return True
+
+        print('waitingForSerial have done')
 
     def UI_pass_parameters_2(self):
         self.qUIinformation["fullLoad"] = self.fullLoad
@@ -452,16 +467,18 @@ class Vision_Module:
                         break
                 if not self.trigger and i == 19:
                     self.if20s = False
+                    self.machine_running=True
                     self.sendSerialOfTrigger()
                     self.waitingForSerial()
+                    self.machine_running=False
 
     def sendSerialOfTrigger(self):
-        # data = [[0x5D], [0x30], [0x01], [0x2A]]
-        # for i in range(0, 4):
-        #     data[i] = bytearray(data[i])
-        #     print(data[i])
-        #     time.sleep(0.1)
-        #     self.ser.write(data[i])
+        data = [[0x5D], [0x30], [0x01], [0x2A]]
+        for i in range(0, 4):
+            data[i] = bytearray(data[i])
+            print(data[i])
+            time.sleep(0.1)
+            self.ser.write(data[i])
 
         print("sendSerialOfTrigger has done")
         self.trigger = False
@@ -474,8 +491,8 @@ class Vision_Module:
         t0 = threading.Thread(target=self.countDown, args=())
         t0.start()
         # 进行传输给语音助手的线程
-        voice_assistant_transfer_thread = threading.Thread(target=self.voice_assistant_transfer,args=())
-        voice_assistant_transfer_thread.start()
+        #voice_assistant_transfer_thread = threading.Thread(target=self.voice_assistant_transfer,args=())
+        #voice_assistant_transfer_thread.start()
 
         while True:
             self.cap.open(self.cameraPath)
@@ -504,6 +521,7 @@ class Vision_Module:
                 self.UI_pass_parameters_1()
 
                 t2.start()
+                self.machine_running=True
                 self.sendSerialInformation()
                 try:
                     if self.waitingForSerial():
@@ -513,13 +531,13 @@ class Vision_Module:
                     self.qUIinformation["fullLoad"] = False
                     self.qUIinformation["ifBegin"] = False
                     self.qUIinformation["ifSuccess"] = True
-
+                self.machine_running=False
                 self.fullLoad = False
                 self.trigger = False
                 self.iftrigger = True
                 if NN == 0:
                     self.frame = None
-                    self.cap = cv2.VideoCapture(self.camera_path)
+                    self.cap = cv2.VideoCapture(self.cameraPath)
                     self.ifGarbage = False
                     self.frameOut = None
                     self.garbageType = None

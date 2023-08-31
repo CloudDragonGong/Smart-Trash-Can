@@ -9,7 +9,7 @@ from voice_assitant.real_time_recording_of_audio import real_time_recording_of_a
 from voice_assitant import stt
 from voice_assitant import tts
 import SparkApi  
-
+import threading
 # 接口地址
 url = "http://ltpapi.xfyun.cn/v1/ke"
 # 开放平台应用ID
@@ -18,7 +18,7 @@ x_appid = "0c946150"
 api_key = "dd56dd6e1b3116009b5f819274539c8f"
 
 
-class IFlytek_assistant(multiprocessing.Process):
+class IFlytek_assistant(threading.Thread):
     def __init__(
         self,
         output_filename,
@@ -26,6 +26,8 @@ class IFlytek_assistant(multiprocessing.Process):
         question_file_path,
         answer_file_path,
         keywords_file_path,
+        machine_running=False,
+        information=None,
         if_need_update_keywords=True,
         SparkApi_switch=False,
         voice_assistant_communication_queue=None,
@@ -41,6 +43,8 @@ class IFlytek_assistant(multiprocessing.Process):
         voice_assistant_communication_queue=None : 信息queue 地址
         """
         super().__init__()
+        self.machine_running=machine_running
+        self.information=information
         self.SparkApi_switch=SparkApi_switch
         self.output_filename = output_filename
         self.output_wav = output_wav
@@ -131,37 +135,39 @@ class IFlytek_assistant(multiprocessing.Process):
     def keywords_of_mate(self):
         self.list_key = [self.extract_keywords(item) for item in self.list]
         self.write_list_of_lists_to_txt(self.list_key,file_path=self.keywords_file_path)
+        print('生成关键字配对的列表 完成')
 
     # 返回回复
     def response(self, text):
+        try:
+            # 提取关键字，和匹配的index
+            keywords_of_input = self.extract_keywords(text=text)
+            print(keywords_of_input)
+            index = self.find_matching_index(self.list_key, keywords_of_input)
+            print(index)
+            print('self.mode = '+str(self.mode))
+            if self.SparkApi_switch:# 是否需要开启聊天模式
 
-        # 提取关键字，和匹配的index
-        keywords_of_input = self.extract_keywords(text=text)
-        print(keywords_of_input)
-        index = self.find_matching_index(self.list_key, keywords_of_input)
-        print(index)
-        print('self.mode = '+str(self.mode))
-        if self.SparkApi_switch:# 是否需要开启聊天模式
+                if index == (45 or 49 or 48 or 52):
+                    # 开启聊天模式
+                    self.mode=1
+                    return self.read_line(self.answer_file_path,index)
+                elif index == (46 or 47 or 50 or 51):
+                    # 关闭聊天模式
+                    self.mode=0
+                    return self.read_line(self.answer_file_path,index)
+                
 
-            if index == (45 or 49 or 48 or 52):
-                # 开启聊天模式
-                self.mode=1
-                return self.read_line(self.answer_file_path,index)
-            elif index == (46 or 47 or 50 or 51):
-                # 关闭聊天模式
-                self.mode=0
+            if self.mode==0:
+
+                if index == None:
+                    return "不好意思主人，我不明白你在说什么"
                 return self.read_line(self.answer_file_path,index)
             
-
-        if self.mode==0:
-
-            if index == None:
-                return "不好意思主人，我不明白你在说什么"
-            return self.read_line(self.answer_file_path,index)
-        
-        else :
-            return SparkApi.Spark_response(question=text)
-
+            else :
+                return SparkApi.Spark_response(question=text)
+        except Exception as e:
+            return '不好意思主任，我这边由于硬件原因，网络出现了问题，你可以再询问我一次'
 
     # 生成垃圾桶的满载情况
     def analysis_full_load_state(self):
@@ -254,15 +260,13 @@ class IFlytek_assistant(multiprocessing.Process):
         return data
 
     def run(self):
-        while True:
+        while not self.machine_running:
             if real_time_recording_of_audio(
                 output_filename=self.output_filename, output_wav=self.output_wav
             ):
-                # 更新list_key，从keywords文件中加载出来，生成列表
+                
                 self.list_key=self.read_txt_to_list_of_lists(self.keywords_file_path)
-                if self.voice_assistant_communication_queue != None:
-                    self.information = self.voice_assistant_communication_queue.get()
-                else:
+                if self.information == None:
                     self.information = {
                         "garbageCategory": None,
                         "fullLoad": False,
@@ -281,7 +285,6 @@ class IFlytek_assistant(multiprocessing.Process):
                 self.analysis_full_load_state()#解析满载情况
                 self.excute(self.output_filename)
 
-
 if __name__ == "__main__":
     assistant = IFlytek_assistant(
         r"voice/response.mp3",
@@ -289,8 +292,8 @@ if __name__ == "__main__":
         r"docs/questions.txt",
         r"docs/answers.txt",
         r"docs/keywords.txt",
-        if_need_update_keywords=False,
-        SparkApi_switch=True
+        if_need_update_keywords=True,
+        SparkApi_switch=True,
+
     )
     assistant.start()
-    # print(SparkApi.Spark_response('你能干什么'))

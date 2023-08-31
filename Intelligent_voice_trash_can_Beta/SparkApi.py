@@ -150,4 +150,4 @@ def Spark_response(question,appid="1eef18f8",
 
 if __name__ == "__main__":
     # 测试时候在此处正确填写相关信息即可运行
-    print(Spark_response(question='你是谁'))
+    print(Spark_response(question='垃圾分类的重要性是什么'))
