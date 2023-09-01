@@ -196,40 +196,72 @@ class Vision_Module:
 
     def detectionModule(self):
         try:
-            return self.AI_module()
+            if self.cap2==None:
+                return detectSpam(self.frame,self.frame2,frame2_valid=False,maskPath=self.mask_path)
+            else:
+                return detectSpam(self.frame, self.frame2, maskPath=self.mask_path)
         except Exception as e:
             print('error in detectionModule')
             return False
 
     def CVModule(self):
         self.qUIinformation["ifBegin"] = True
+        img = self.frame
+
+        #####由于硬件优化改变，完全不需要视觉处理##########
+
+        # mask  = cv2.imread(maskPath)
+
+        # #必须是相同的大小的图片才可以
+        # imgGray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+        # mask = cv2.cvtColor(mask,cv2.COLOR_BGR2GRAY)
+
+        # rows1,cols1 = imgGray.shape
+        # mask = mask[0:rows1,0:cols1]
+
+        # ret,mask = cv2.threshold(mask, 100, 255, cv2.THRESH_BINARY)
+        # #img = cv2.bitwise_and(img,img,mask = mask)
+        # imgUnevenLight = unevenLightCompensate (img , 16)
+        # imgEdge = edge_demo(imgUnevenLight)
+        # box,imgSmooth = smooth(imgEdge)
+        # if  box  is None:
+        #     print('cutOut box error')
+        #     return
+        # # imgOut= cut(img,box)
+        # if  imgOut  is None:
+        #     print('cutOut error')
+        #     return
+
+        #############################################
+        imgOut = img
+        self.frameOut = imgOut
+        cv2.imwrite("img//imgOut.jpeg", imgOut)
         self.qUIinformation["ifBegin"] = True
         self.qUIinformation["ifSuccess"] = False
 
     def AIModule(self):
-        flag,num_garbage = self.AI_module.Module(self.frame)
-        if flag is None:
-            return False
+        self.frameOut = cv2.imread("img//1.jpg")
+        flag = self.AI_module.Module(self.frameOut)
         print("flag=" + str(flag))
+        
+
         if flag == 0:
             self.garbageType = "其他垃圾"
-            self.other_Garbage += num_garbage
-        elif flag == 1:
+            self.other_Garbage += 1
+        if flag == 1:
             self.garbageType = "厨余垃圾"
-            self.kitchen_Waste += num_garbage
-        elif flag == 2:
+            self.kitchen_Waste += 1
+        if flag == 2:
             self.garbageType = "可回收垃圾"
-            self.recyclable_Trash += num_garbage
-        elif flag == 3:
+            self.recyclable_Trash += 1
+        if flag == 3:
             self.garbageType = "有害垃圾"
-            self.hazardous_Waste += num_garbage
-        else:
-            return False
+            self.hazardous_Waste += 1
+
         self.qUIinformation["serialOfGarbage"] = flag
         self.qUIinformation["ifBegin"] = True
         self.qUIinformation["ifSuccess"] = True
         print("AIModule done")
-        return True
 
     def UI_pass_parameters_1(self):
         Lock.write_acquire()
@@ -463,13 +495,9 @@ class Vision_Module:
         #voice_assistant_transfer_thread.start()
 
         while True:
-            try:
-                self.cap.open(self.cameraPath)
-                if self.cameraPath2 != None: self.cap2.open(self.cameraPath2)
-                self.camera()
-            except Exception as e:
-                print("camera can't open")
-                continue
+            self.cap.open(self.cameraPath)
+            if self.cameraPath2 != None: self.cap2.open(self.cameraPath2)
+            self.camera()
             if not self.detectionModule():
                 self.UI_pass_parameters_0()
             elif self.if20s:
@@ -489,7 +517,7 @@ class Vision_Module:
 
                 self.CVModule()
                 t1.start()
-                # self.AIModule()
+                self.AIModule()
                 self.UI_pass_parameters_1()
 
                 t2.start()

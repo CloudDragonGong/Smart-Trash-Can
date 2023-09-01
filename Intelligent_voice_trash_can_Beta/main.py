@@ -54,9 +54,9 @@ import serial.tools.list_ports as serials
 
 
 # 文件间的import
-import cv_module
+import cv_module_old
 import UI
-import AI_module
+import AI_module_old
 from lock import Lock
 from voice_assitant import VoiceAssistant
 from voice_assitant import voice_assistant_stupid
