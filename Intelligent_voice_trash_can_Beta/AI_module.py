@@ -1,60 +1,8 @@
-from multiprocessing import Queue, Process
-import threading
-import cv2
-import numpy as np
-import time
-import math
-
-import os
-
-import sys
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtWidgets import QApplication, QMainWindow
-from PyQt5.QtCore import QTimer
-from PyQt5.QtGui import QImage, QPixmap
-from PyQt5.QtWidgets import QMessageBox
-
-# from open_camera import Ui_MainWindow
-import numpy as np
-import cv2
-import time
-from random import uniform
-from PyQt5.Qt import *
-import sys
-import warnings
-import threading
-from PyQt5.QtCore import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtGui import *
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import QTimer, QDateTime
-
-# AImodel
-from torch.utils.data import DataLoader
-import torchvision.transforms as transforms
-from torchvision import models
-import torch.nn as nn
-import torch
-import os
-import numpy as np
-import matplotlib.pyplot as plt
-
-from PIL import Image
-import glob
-from torch.utils.data import Dataset
 import random
-from PIL import ImageFile
-
-import serial
-import serial.tools.list_ports as serials
+import numpy as np
 import onnxruntime as ort
-
-# 神经网络参数初始化
-ImageFile.LOAD_TRUNCATED_IMAGES = True
-
-# %matplotlib inline
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-
+from PIL import Image
+import cv2
 
 # 必要的图像处理函数-填充、缩放、尺寸调整
 def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleup=True, stride=32):
@@ -92,14 +40,14 @@ class AIModule:
         self.session = None  # model
         self.providers = None  # devices
         self.load_path = load_path
-
+        self.cuda = False
         self.names = ['cipian', 'eluanshi', 'tudou', 'bailuobo', 'huluobo',
                       'yilaguan', 'bottle', 'battery', 'medician']
-        self.colors = {name: [random.randint(0, 255) for _ in range(3)] for i, name in enumerate(names)}
+        self.colors = {name: [random.randint(0, 255) for _ in range(3)] for i, name in enumerate(self.names)}
 
     def LoadModel(self):
         print("模型开始加载")
-        self.providers = ['CUDAExecutionProvider', 'CPUExecutionProvider'] if cuda else ['CPUExecutionProvider']
+        self.providers = ['CUDAExecutionProvider', 'CPUExecutionProvider'] if self.cuda else ['CPUExecutionProvider']
         # session是模型
         self.session = ort.InferenceSession(self.load_path, providers=self.providers)
         # 标签对应颜色
@@ -108,7 +56,7 @@ class AIModule:
     def img_process(self, img):
         self.img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-        image = img.copy()
+        image = self.img.copy()
         image, ratio, dwdh = letterbox(image, auto=False)
         image = image.transpose((2, 0, 1))
         image = np.expand_dims(image, 0)
@@ -124,14 +72,16 @@ class AIModule:
         inname = [i.name for i in self.session.get_inputs()]
 
         inp = {inname[0]: im}
-
         # ONNX inference
         outputs = self.session.run(outname, inp)[0]
+        print(outputs)
+
         return outputs
 
     def Module(self, frame):
         im, image, ratio, dwdh = self.img_process(frame)
         outputs = self.get_preds(im)
+        print(f'the length is {len(outputs)}')
         if len(outputs) == 0:
             return None
         return self.gar_sort(outputs, ratio, dwdh)
@@ -171,3 +121,16 @@ class AIModule:
             flag = None
         print("分类完成")
         return flag, len(outputs)
+
+if __name__ == '__main__':
+    module = AIModule(load_path=r'E:\repository\model\best.onnx',cuda=False)
+    module.LoadModel()
+    img_path = r'E:\repository\Smart-Trash-Can\img\WIN_20230901_17_21_19_Pro.jpg'
+    img = cv2.imread(img_path)
+    result = module.Module(img)
+
+    # 显示图像
+    cv2.imshow('Image', img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    print(result)
